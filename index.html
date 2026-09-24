@@ -99,7 +99,7 @@
   <section class="card">
     <div class="fields">
       <label class="gtin">GTIN-13 der Verkaufseinheit
-        <input id="gtin" class="mono" inputmode="numeric" autocomplete="off" spellcheck="false" placeholder="4262608280048" maxlength="14">
+        <input id="gtin" class="mono" inputmode="numeric" autocomplete="off" spellcheck="false" placeholder="4012345678901" maxlength="14">
       </label>
       <label>Stück pro Karton
         <input id="qty" inputmode="numeric" autocomplete="off" placeholder="40" min="2" max="99999">
@@ -310,8 +310,8 @@
     delete qtyMap[b.dataset.unmap]; renderMap(); render();
   });
 
-  // Working state on load: one of Qstar's own shakers as example
-  if (!gtinEl.value) { gtinEl.value = "4262608280048"; qtyEl.value = "10"; }
+  // Working state on load: neutral GS1 example number
+  if (!gtinEl.value) { gtinEl.value = "4012345678901"; qtyEl.value = "10"; }
   renderMap(); renderList(); render();
 })();
 </script>
