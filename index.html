@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Karton-GTIN Rechner</title>
+</head>
+<body>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --bg: #F4F6F8; --surface: #FFFFFF; --ink: #171A20; --muted: #667085; --line: #D9DEE5;
+    --accent: #0E6E69; --accent-ink: #FFFFFF; --accent-soft: #E3F1F0;
+    --ok: #2A7B3B; --ok-soft: #E6F3E9; --err: #B3261E; --err-soft: #FBE9E7;
+    --code-bg: #EEF1F4;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg: #0F1216; --surface: #171B21; --ink: #E7EAEF; --muted: #98A2B3; --line: #2A313B;
+      --accent: #4FC7BF; --accent-ink: #0B1513; --accent-soft: #14302E;
+      --ok: #6CCB7F; --ok-soft: #142A19; --err: #F2857A; --err-soft: #3A1714;
+      --code-bg: #0F1216;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #0F1216; --surface: #171B21; --ink: #E7EAEF; --muted: #98A2B3; --line: #2A313B;
+    --accent: #4FC7BF; --accent-ink: #0B1513; --accent-soft: #14302E;
+    --ok: #6CCB7F; --ok-soft: #142A19; --err: #F2857A; --err-soft: #3A1714;
+    --code-bg: #0F1216;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: "IBM Plex Sans", "Segoe UI", Helvetica, Arial, sans-serif; font-size: 15px; line-height: 1.5;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; padding-block: 28px 48px; padding-inline: 16px; display: grid; gap: 20px; }
+  header h1 { font-size: 22px; font-weight: 600; margin: 0 0 4px; letter-spacing: -0.01em; text-wrap: balance; }
+  header p { margin: 0; color: var(--muted); max-width: 62ch; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 20px; }
+  .fields { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 14px; }
+  @media (max-width: 520px) { .fields { grid-template-columns: 1fr 1fr; } .fields .gtin { grid-column: 1 / -1; } }
+  label { display: grid; gap: 6px; font-size: 12px; font-weight: 500; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
+  input, select {
+    font: inherit; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 7px;
+    padding: 9px 11px; width: 100%; min-width: 0;
+  }
+  input.mono { font-family: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace; font-variant-numeric: tabular-nums; letter-spacing: 0.04em; }
+  input:focus, select:focus, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .hint { font-size: 13px; color: var(--muted); margin-top: 10px; min-height: 1.4em; }
+  .hint.err { color: var(--err); }
+  .hint.ok { color: var(--ok); }
+  .result { margin-top: 18px; display: grid; gap: 10px; }
+  .result-code {
+    font-family: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace; font-variant-numeric: tabular-nums;
+    font-size: clamp(22px, 6vw, 34px); font-weight: 500; letter-spacing: 0.08em; padding: 14px 16px;
+    background: var(--code-bg); border-radius: 8px; overflow-x: auto; white-space: nowrap;
+  }
+  .result-code .ind { color: var(--accent); }
+  .result-code .chk { color: var(--accent); }
+  .result-code.empty { color: var(--muted); letter-spacing: 0.04em; font-size: 15px; font-family: inherit; }
+  .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  button {
+    font: inherit; font-weight: 500; border-radius: 7px; padding: 9px 14px; cursor: pointer; border: 1px solid var(--line);
+    background: var(--surface); color: var(--ink);
+  }
+  button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  button:disabled { opacity: 0.45; cursor: not-allowed; }
+  button.small { padding: 5px 9px; font-size: 13px; }
+  .toast { font-size: 13px; color: var(--ok); }
+  details { font-size: 13px; color: var(--muted); }
+  details summary { cursor: pointer; }
+  details code { font-family: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace; font-variant-numeric: tabular-nums; }
+  h2 { font-size: 15px; font-weight: 600; margin: 0; }
+  .card-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .table-wrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  th { font-size: 12px; font-weight: 500; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
+  td.mono { font-family: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace; font-variant-numeric: tabular-nums; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  td.act { text-align: right; }
+  tr.empty td { color: var(--muted); white-space: normal; }
+  .map { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px 4px 10px; border: 1px solid var(--line); border-radius: 999px; font-size: 13px; background: var(--accent-soft); }
+  .chip b { font-weight: 600; }
+  .chip button { border: 0; background: transparent; padding: 0 2px; line-height: 1; color: var(--muted); font-size: 15px; }
+  footer { font-size: 12px; color: var(--muted); }
+  @media (prefers-reduced-motion: no-preference) { .toast { transition: opacity .3s; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Karton-GTIN Rechner</h1>
+    <p>Leitet aus der GTIN-13 einer Verkaufseinheit die GTIN-14 der Umverpackung ab (GS1: Verpackungsindikator + 12 Stammziffern + neue Prüfziffer). Die Zuordnung Menge → Indikator merkt sich der Browser.</p>
+  </header>
+
+  <section class="card">
+    <div class="fields">
+      <label class="gtin">GTIN-13 der Verkaufseinheit
+        <input id="gtin" class="mono" inputmode="numeric" autocomplete="off" spellcheck="false" placeholder="4262608280048" maxlength="14">
+      </label>
+      <label>Stück pro Karton
+        <input id="qty" inputmode="numeric" autocomplete="off" placeholder="40" min="2" max="99999">
+      </label>
+      <label>Indikator
+        <select id="ind">
+          <option value="">–</option>
+          <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option>
+          <option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option>
+        </select>
+      </label>
+    </div>
+    <div id="hint" class="hint"></div>
+
+    <div class="result">
+      <div id="out" class="result-code empty">GTIN eingeben, dann erscheint hier die Karton-GTIN.</div>
+      <div class="row">
+        <button id="copy" class="primary" disabled>GTIN-14 kopieren</button>
+        <button id="add" disabled>In Liste übernehmen</button>
+        <span id="toast" class="toast" aria-live="polite"></span>
+      </div>
+      <details id="calc" hidden>
+        <summary>Rechenweg anzeigen</summary>
+        <div id="calc-body"></div>
+      </details>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <h2>Liste</h2>
+      <div class="row">
+        <button id="copy-table" class="small" disabled>Tabelle kopieren (für Excel)</button>
+        <button id="clear" class="small" disabled>Liste leeren</button>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>GTIN-13</th><th>Stück</th><th>Ind.</th><th>GTIN-14 Karton</th><th></th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <h2>Zuordnung Menge → Indikator</h2>
+    </div>
+    <div id="map" class="map"></div>
+    <p class="hint" style="margin-top:12px">Wird beim ersten Berechnen einer neuen Menge automatisch angelegt. Pro Indikator nur eine Kartonmenge, sonst sind zwei verschiedene Kartons nicht unterscheidbar.</p>
+  </section>
+
+  <footer>Prüfziffer nach GS1: Gewichte 3, 1, 3, 1 … von rechts, Prüfziffer = (10 − Summe mod 10) mod 10. Alles läuft lokal im Browser, es werden keine Daten übertragen.</footer>
+</div>
+
+<script>
+(function () {
+  const $ = (id) => document.getElementById(id);
+  const gtinEl = $("gtin"), qtyEl = $("qty"), indEl = $("ind"), hint = $("hint"), out = $("out");
+  const copyBtn = $("copy"), addBtn = $("add"), toast = $("toast"), calc = $("calc"), calcBody = $("calc-body");
+  const rowsEl = $("rows"), copyTableBtn = $("copy-table"), clearBtn = $("clear"), mapEl = $("map");
+
+  const DEFAULT_MAP = { "10": "1", "40": "2" };
+  const store = {
+    get(k, fb) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : fb; } catch (e) { return fb; } },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+  };
+  let qtyMap = store.get("gtin14.map", DEFAULT_MAP);
+  let list = store.get("gtin14.list", []);
+  let current = null;
+
+  function checkDigit(data) {
+    let sum = 0;
+    for (let i = 0; i < data.length; i++) {
+      const w = (data.length - i) % 2 === 1 ? 3 : 1;   // rightmost data digit gets weight 3
+      sum += Number(data[i]) * w;
+    }
+    return String((10 - (sum % 10)) % 10);
+  }
+
+  // Normalises input to a 13-digit GTIN. Returns {gtin13} or {error}.
+  function parseGtin(raw) {
+    const d = raw.replace(/\D/g, "");
+    if (!d) return { error: "" };
+    if (d.length === 14) {
+      if (d[0] !== "0") return { error: "14 Ziffern, die nicht mit 0 beginnen: das ist bereits eine Karton-GTIN. Bitte die GTIN-13 der Verkaufseinheit eingeben." };
+      return finish(d.slice(1));
+    }
+    if (d.length === 13) return finish(d);
+    if (d.length === 12) return finish("0" + d);   // UPC-A
+    if (d.length < 13) return { error: `${d.length} von 13 Ziffern` };
+    return { error: "Zu viele Ziffern." };
+    function finish(g13) {
+      if (checkDigit(g13.slice(0, 12)) !== g13[12]) return { error: `Prüfziffer falsch (erwartet ${checkDigit(g13.slice(0, 12))}, eingegeben ${g13[12]}). Bitte die Nummer prüfen.` };
+      return { gtin13: g13 };
+    }
+  }
+
+  function render() {
+    const p = parseGtin(gtinEl.value);
+    const qty = qtyEl.value.replace(/\D/g, "");
+    if (qty && qtyMap[qty] && !indEl.dataset.manual) indEl.value = qtyMap[qty];
+    const ind = indEl.value;
+
+    current = null;
+    hint.className = "hint";
+    calc.hidden = true;
+    copyBtn.disabled = addBtn.disabled = true;
+
+    if (p.error !== undefined) {
+      hint.textContent = p.error; if (p.error && !/von 13/.test(p.error)) hint.className = "hint err";
+      out.className = "result-code empty"; out.textContent = "GTIN eingeben, dann erscheint hier die Karton-GTIN.";
+      return;
+    }
+    if (!qty) { hint.textContent = "GTIN-13 gültig. Jetzt Stück pro Karton eingeben."; hint.className = "hint ok"; out.className = "result-code empty"; out.textContent = "Menge fehlt."; return; }
+    if (!ind) {
+      hint.textContent = `Für ${qty} Stück ist noch kein Indikator hinterlegt. Bitte einen freien Indikator (1–8) wählen, er wird gemerkt.`;
+      out.className = "result-code empty"; out.textContent = "Indikator fehlt."; return;
+    }
+    const usedBy = Object.keys(qtyMap).find(q => qtyMap[q] === ind && q !== qty);
+    if (usedBy) {
+      hint.textContent = `Indikator ${ind} ist bereits für ${usedBy} Stück vergeben. Pro Indikator nur eine Kartonmenge.`;
+      hint.className = "hint err"; out.className = "result-code empty"; out.textContent = "Indikator schon belegt."; return;
+    }
+
+    const base = ind + p.gtin13.slice(0, 12);
+    const chk = checkDigit(base);
+    const gtin14 = base + chk;
+    current = { gtin13: p.gtin13, qty, ind, gtin14 };
+    hint.textContent = `GTIN-13 gültig. Karton mit ${qty} Stück, Indikator ${ind}.`; hint.className = "hint ok";
+    out.className = "result-code";
+    out.innerHTML = `<span class="ind">${ind}</span>${p.gtin13.slice(0, 12)}<span class="chk">${chk}</span>`;
+    copyBtn.disabled = addBtn.disabled = false;
+
+    let terms = [], sum = 0;
+    for (let i = 0; i < base.length; i++) { const w = (base.length - i) % 2 === 1 ? 3 : 1; terms.push(`${base[i]}·${w}`); sum += Number(base[i]) * w; }
+    calcBody.innerHTML = `Basis <code>${base}</code> (Indikator ${ind} + 12 Stammziffern)<br>Summe ${terms.join(" + ")} = <b>${sum}</b><br>Prüfziffer (10 − ${sum % 10}) mod 10 = <b>${chk}</b>`;
+    calc.hidden = false;
+  }
+
+  function say(msg) { toast.textContent = msg; clearTimeout(say.t); say.t = setTimeout(() => toast.textContent = "", 2200); }
+
+  function copyText(text, el) {
+    const fallback = () => {
+      const ta = document.createElement("textarea"); ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0";
+      document.body.appendChild(ta); ta.select();
+      let ok = false; try { ok = document.execCommand("copy"); } catch (e) {}
+      document.body.removeChild(ta);
+      if (!ok && el) { const r = document.createRange(); r.selectNodeContents(el); const s = getSelection(); s.removeAllRanges(); s.addRange(r); }
+      return ok;
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      return navigator.clipboard.writeText(text).then(() => true).catch(() => fallback());
+    }
+    return Promise.resolve(fallback());
+  }
+
+  function renderList() {
+    rowsEl.innerHTML = "";
+    if (!list.length) {
+      rowsEl.innerHTML = `<tr class="empty"><td colspan="5">Noch leer. Berechnete Karton-GTINs mit „In Liste übernehmen“ sammeln und dann als Tabelle nach Excel kopieren.</td></tr>`;
+    }
+    list.forEach((r, i) => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td class="mono">${r.gtin13}</td><td class="num">${r.qty}</td><td class="num">${r.ind}</td><td class="mono">${r.gtin14}</td>
+        <td class="act"><button class="small" data-copy="${i}">Kopieren</button> <button class="small" data-del="${i}" title="Zeile entfernen">✕</button></td>`;
+      rowsEl.appendChild(tr);
+    });
+    copyTableBtn.disabled = clearBtn.disabled = !list.length;
+    store.set("gtin14.list", list);
+  }
+
+  function renderMap() {
+    mapEl.innerHTML = "";
+    const keys = Object.keys(qtyMap).sort((a, b) => Number(a) - Number(b));
+    if (!keys.length) mapEl.innerHTML = `<span class="hint">Keine Zuordnung hinterlegt.</span>`;
+    keys.forEach(q => {
+      const chip = document.createElement("span"); chip.className = "chip";
+      chip.innerHTML = `<b>${q} Stk</b> → Indikator ${qtyMap[q]} <button data-unmap="${q}" title="Zuordnung entfernen">✕</button>`;
+      mapEl.appendChild(chip);
+    });
+    store.set("gtin14.map", qtyMap);
+  }
+
+  gtinEl.addEventListener("input", render);
+  qtyEl.addEventListener("input", () => { delete indEl.dataset.manual; if (!qtyMap[qtyEl.value.replace(/\D/g, "")]) indEl.value = ""; render(); });
+  indEl.addEventListener("change", () => { indEl.dataset.manual = "1"; render(); });
+
+  copyBtn.addEventListener("click", () => { if (!current) return; copyText(current.gtin14, out).then(ok => say(ok ? `${current.gtin14} kopiert` : "Bitte manuell kopieren (markiert)")); });
+  addBtn.addEventListener("click", () => {
+    if (!current) return;
+    if (!qtyMap[current.qty]) { qtyMap[current.qty] = current.ind; renderMap(); }
+    if (list.some(r => r.gtin14 === current.gtin14)) { say("Steht schon in der Liste"); return; }
+    list.push({ ...current }); renderList(); say("Übernommen");
+  });
+  rowsEl.addEventListener("click", (e) => {
+    const b = e.target.closest("button"); if (!b) return;
+    if (b.dataset.copy !== undefined) { const r = list[Number(b.dataset.copy)]; copyText(r.gtin14).then(ok => say(ok ? `${r.gtin14} kopiert` : "Kopieren nicht möglich")); }
+    if (b.dataset.del !== undefined) { list.splice(Number(b.dataset.del), 1); renderList(); }
+  });
+  copyTableBtn.addEventListener("click", () => {
+    const tsv = ["GTIN-13\tStück pro Karton\tIndikator\tGTIN-14"].concat(list.map(r => [r.gtin13, r.qty, r.ind, r.gtin14].join("\t"))).join("\n");
+    copyText(tsv).then(ok => say(ok ? `${list.length} Zeilen kopiert, in Excel einfügen` : "Kopieren nicht möglich"));
+  });
+  clearBtn.addEventListener("click", () => { list = []; renderList(); say("Liste geleert"); });
+  mapEl.addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-unmap]"); if (!b) return;
+    delete qtyMap[b.dataset.unmap]; renderMap(); render();
+  });
+
+  // Working state on load: one of Qstar's own shakers as example
+  if (!gtinEl.value) { gtinEl.value = "4262608280048"; qtyEl.value = "10"; }
+  renderMap(); renderList(); render();
+})();
+</script>
+
+</body>
+</html>
